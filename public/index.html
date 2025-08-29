@@ -160,6 +160,7 @@
     let socket = null;
     let currentRole = null;
     let currentRoom = null;
+    let pendingRoomFromQR = null; // <- NEW: room carried from URL until user picks role
 
     // ---------- CONNECTION BADGE ----------
     function updateConnectionStatus(ok){
@@ -192,6 +193,7 @@
     // ---------- ROLE FLOW ----------
     function selectRole(role, btnEl){
       currentRole = role;
+
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
       if (btnEl) btnEl.classList.add('active');
 
@@ -201,16 +203,16 @@
 
       if (!socket) initSocket();
 
-      if (role === 'guest' || role === 'receptionist'){
-        const urlRoom = new URLSearchParams(location.search).get('room');
-        if (urlRoom) {
-          joinRoom(urlRoom);
-        } else if (role === 'receptionist'){
-          const manual = prompt('Enter Room ID:');
-          if (manual) joinRoom(manual);
-        } else {
-          showStatus(role,'Please scan the QR or use the shared link','info');
-        }
+      // If landed via QR (room present), join it now AFTER choosing role
+      if (pendingRoomFromQR) {
+        const roomId = pendingRoomFromQR;
+        joinRoom(roomId);
+      } else if (role === 'receptionist') {
+        // No room param: receptionist can enter room manually
+        const manual = prompt('Enter Room ID:');
+        if (manual) joinRoom(manual);
+      } else {
+        showStatus(role,'Please scan the QR or use the shared link','info');
       }
     }
 
@@ -223,6 +225,7 @@
         body:JSON.stringify({hotelName})
       }).then(r=>r.json()).then(data=>{
         // Build URL on the client using the public host (works on Render)
+        // Note: keep it without role so the user can pick at join time.
         const guestUrl = `${location.origin}/?room=${data.roomId}`;
         document.getElementById('qrContainer').classList.add('active');
         document.getElementById('generatedRoomId').textContent = data.roomId;
@@ -361,27 +364,37 @@
     // ---------- DOM READY ----------
     document.addEventListener('DOMContentLoaded', () => {
       updateConnectionStatus(false);
+      if (!socket) initSocket();
 
-      // Auto-guest when opened from QR
-      const room = new URLSearchParams(location.search).get('room');
-      if (room){
-        // Hide Admin button (optional)
-        const adminBtn = document.querySelector('.role-btn[onclick^="selectRole(\'admin"]');
+      const params = new URLSearchParams(location.search);
+      const roomParam = params.get('room');
+      const roleParam = (params.get('role') || '').toLowerCase();
+
+      if (roomParam) {
+        // We came from a QR/link with a room. Let the user choose role unless explicitly provided.
+        pendingRoomFromQR = roomParam;
+
+        // Hide Admin (optional) and show the role picker
+        const adminBtn = document.querySelector('.role-btn[onclick*="selectRole(\'admin"]');
         if (adminBtn) adminBtn.style.display='none';
-
-        // Show Guest view and join immediately
-        currentRole = 'guest';
-        document.getElementById('roleSelector').style.display='none';
+        document.getElementById('roleSelector').style.display='block';
         document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
-        document.getElementById('guestContent').classList.add('active');
-        if (!socket) initSocket();
-        currentRoom = room;
-        document.getElementById('guestRoomId').textContent = room;
-        const lang = document.getElementById('guestLanguage').value;
-        socket.emit('join_room',{ room, role:'guest', language: lang });
-        showStatus('guest','Connecting...','info');
+
+        // Auto-join only if role=guest or role=receptionist is present
+        if (roleParam === 'guest' || roleParam === 'receptionist') {
+          selectRole(roleParam);
+          joinRoom(roomParam);
+          if (roleParam === 'guest') {
+            document.getElementById('guestRoomId').textContent = roomParam;
+          } else {
+            document.getElementById('receptionistRoomId').textContent = roomParam;
+          }
+          showStatus(roleParam,'Connecting...','info');
+        }
       } else {
-        if (!socket) initSocket();
+        // No room param → normal homepage, show the role picker
+        document.getElementById('roleSelector').style.display='block';
+        document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
       }
 
       // Live guest language changes
@@ -419,4 +432,3 @@
   </script>
 </body>
 </html>
-
