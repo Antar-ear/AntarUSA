@@ -72,9 +72,9 @@
     <div class="role-selector" id="roleSelector">
       <h3>Select Your Role</h3>
       <div class="role-buttons">
-        <button class="role-btn" onclick="selectRole('admin')">Admin</button>
-        <button class="role-btn" onclick="selectRole('guest')">Guest</button>
-        <button class="role-btn" onclick="selectRole('receptionist')">Receptionist</button>
+        <button class="role-btn" onclick="selectRole('admin', this)">Admin</button>
+        <button class="role-btn" onclick="selectRole('guest', this)">Guest</button>
+        <button class="role-btn" onclick="selectRole('receptionist', this)">Receptionist</button>
       </div>
     </div>
 
@@ -154,22 +154,33 @@
     // ===== CONFIG =====
     const TTS_ENABLED = false; // MVP: server's /api/tts returns 501
     const MIN_MS = 1000;
+    const MAX_MS = 15000; // soft cap for very long utterances
     // ==================
 
     let socket = null;
     let currentRole = null;
     let currentRoom = null;
 
-    // connection badge
+    // ---------- CONNECTION BADGE ----------
     function updateConnectionStatus(ok){
       const el = document.getElementById('connectionStatus');
       el.textContent = ok ? 'Connected' : 'Disconnected';
       el.className = 'connection-status ' + (ok ? 'connected' : 'disconnected');
     }
 
+    // ---------- SOCKET.IO ----------
     function initSocket(){
       socket = io(); // same origin
-      socket.on('connect', () => updateConnectionStatus(true));
+      socket.on('connect', () => {
+        updateConnectionStatus(true);
+        // Re-join room on reconnect
+        if (currentRoom && currentRole) {
+          const lang = (currentRole === 'guest')
+            ? document.getElementById('guestLanguage').value
+            : 'en-US';
+          socket.emit('join_room', { room: currentRoom, role: currentRole, language: lang });
+        }
+      });
       socket.on('disconnect', () => updateConnectionStatus(false));
       socket.on('translation', handleTranslation);
       socket.on('room_joined', d => showStatus(currentRole, `Connected to room: ${d.room}`,'success'));
@@ -178,11 +189,12 @@
       socket.on('error', e => showStatus(currentRole, e.message || 'Error','error'));
     }
 
-    // Role flow
-    function selectRole(role){
+    // ---------- ROLE FLOW ----------
+    function selectRole(role, btnEl){
       currentRole = role;
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active'); // eslint-disable-line
+      if (btnEl) btnEl.classList.add('active');
+
       document.getElementById('roleSelector').style.display = 'none';
       document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
       document.getElementById(role+'Content').classList.add('active');
@@ -191,8 +203,9 @@
 
       if (role === 'guest' || role === 'receptionist'){
         const urlRoom = new URLSearchParams(location.search).get('room');
-        if (urlRoom) joinRoom(urlRoom);
-        else if (role === 'receptionist'){
+        if (urlRoom) {
+          joinRoom(urlRoom);
+        } else if (role === 'receptionist'){
           const manual = prompt('Enter Room ID:');
           if (manual) joinRoom(manual);
         } else {
@@ -201,7 +214,7 @@
       }
     }
 
-    // Admin → Create room + QR
+    // ---------- ADMIN: CREATE ROOM + QR ----------
     function generateQR(){
       const hotelName = (document.getElementById('hotelName').value || 'My Hotel').trim();
       fetch('/api/generate-room',{
@@ -231,6 +244,7 @@
       }).catch(()=>alert('Failed to generate QR'));
     }
 
+    // ---------- JOIN ROOM ----------
     function joinRoom(roomId){
       currentRoom = roomId;
       if (currentRole === 'guest') document.getElementById('guestRoomId').textContent = roomId;
@@ -241,6 +255,7 @@
       showStatus(currentRole,'Connecting...','info');
     }
 
+    // ---------- STATUS + MESSAGES ----------
     function handleProcessingStatus(d){
       const map = {
         transcribing:'Converting speech to text...',
@@ -302,14 +317,16 @@
     let audioCtx, mediaStream, sourceNode, processorNode, chunks = [], recording=false;
 
     async function ensureAudio(){
-      if (audioCtx) return;
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      sourceNode = audioCtx.createMediaStreamSource(mediaStream);
-      processorNode = audioCtx.createScriptProcessor(4096,1,1);
-      processorNode.onaudioprocess = e => { if (recording) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
-      sourceNode.connect(processorNode);
-      processorNode.connect(audioCtx.destination);
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch {} }
+      if (!mediaStream) {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+        processorNode = audioCtx.createScriptProcessor(4096,1,1);
+        processorNode.onaudioprocess = e => { if (recording) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+        sourceNode.connect(processorNode);
+        processorNode.connect(audioCtx.destination);
+      }
     }
 
     function mergeFloat32(arrs){ const len = arrs.reduce((n,a)=>n+a.length,0); const out=new Float32Array(len); let o=0; for(const a of arrs){ out.set(a,o); o+=a.length; } return out; }
@@ -318,6 +335,8 @@
     function bufToB64(buf){ let bin=''; const bytes=new Uint8Array(buf), chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); } return btoa(bin); }
 
     async function toggleRecording(role){
+      if (!currentRoom) return showStatus(role, 'Join a room first (scan QR or enter Room ID)', 'error');
+
       const btn = document.getElementById(role+'RecordBtn');
       if (!recording){
         try { await ensureAudio(); } catch { return showStatus(role,'Microphone permission required','error'); }
@@ -327,6 +346,8 @@
         recording=false; btn.classList.remove('recording'); btn.textContent = role==='guest'?'Speak':'Speak (English)';
         const dur = Date.now() - (parseInt(btn.dataset.ts||'0',10));
         if (dur < MIN_MS){ chunks=[]; return showStatus(role,'Recording too short. Please speak at least 1s.','error'); }
+        if (dur > MAX_MS){ showStatus(role,'Long message — consider shorter sentences for best accuracy.','info'); }
+
         const merged = mergeFloat32(chunks); chunks=[];
         const resampled = resampleTo16k(merged, audioCtx.sampleRate);
         const pcm = floatTo16lePCM(resampled);
@@ -336,25 +357,19 @@
         showStatus(role,'Processing...','info');
       }
     }
-    // ----------------------------------------------------
 
-    function sendTextMessage(role){
-      const el = document.getElementById(role+'TextInput');
-      const text = el.value.trim(); if (!text) return;
-      const language = (role==='guest') ? document.getElementById('guestLanguage').value : 'en-US';
-      socket.emit('text_message',{ room: currentRoom, role, language, text });
-      el.value=''; showStatus(role,'Message sent!','success');
-    }
-
-    // Auto-guest when opened from QR
+    // ---------- DOM READY ----------
     document.addEventListener('DOMContentLoaded', () => {
       updateConnectionStatus(false);
+
+      // Auto-guest when opened from QR
       const room = new URLSearchParams(location.search).get('room');
       if (room){
         // Hide Admin button (optional)
-        const adminBtn = document.querySelector('.role-btn[onclick="selectRole(\'admin\')"]');
+        const adminBtn = document.querySelector('.role-btn[onclick^="selectRole(\'admin"]');
         if (adminBtn) adminBtn.style.display='none';
-        // Show Guest
+
+        // Show Guest view and join immediately
         currentRole = 'guest';
         document.getElementById('roleSelector').style.display='none';
         document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
@@ -365,14 +380,43 @@
         const lang = document.getElementById('guestLanguage').value;
         socket.emit('join_room',{ room, role:'guest', language: lang });
         showStatus('guest','Connecting...','info');
+      } else {
+        if (!socket) initSocket();
       }
+
+      // Live guest language changes
+      const sel = document.getElementById('guestLanguage');
+      if (sel) {
+        sel.addEventListener('change', () => {
+          if (socket && currentRoom && currentRole === 'guest') {
+            socket.emit('join_room', { room: currentRoom, role: 'guest', language: sel.value });
+            showStatus('guest', `Language changed to ${sel.options[sel.selectedIndex].text}`, 'success');
+          }
+        });
+      }
+
+      // iOS/Safari audio unlock (one-time)
+      const unlock = () => { try { audioCtx?.resume?.(); } catch {} };
+      window.addEventListener('click', unlock, { once: true, passive: true });
+      window.addEventListener('touchstart', unlock, { once: true, passive: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') { try { audioCtx?.resume?.(); } catch {} }
+      });
     });
 
-    // Expose for onclick
+    // ---------- EXPOSED FOR INLINE HANDLERS ----------
     window.selectRole = selectRole;
     window.generateQR = generateQR;
     window.toggleRecording = toggleRecording;
-    window.sendTextMessage = sendTextMessage;
+    window.sendTextMessage = function(role){
+      const el = document.getElementById(role+'TextInput');
+      const text = el.value.trim(); if (!text) return;
+      const language = (role==='guest') ? document.getElementById('guestLanguage').value : 'en-US';
+      if (!currentRoom) { showStatus(role, 'Join a room first (scan QR or enter Room ID)', 'error'); return; }
+      socket.emit('text_message',{ room: currentRoom, role, language, text });
+      el.value=''; showStatus(role,'Message sent!','success');
+    };
   </script>
 </body>
 </html>
+
