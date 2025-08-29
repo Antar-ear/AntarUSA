@@ -4,66 +4,59 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Hotel Translation System</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-           background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; padding:20px; }
-    .container { max-width:600px; margin:0 auto; background:#fff; border-radius:20px;
-                 box-shadow:0 20px 40px rgba(0,0,0,.1); overflow:hidden; }
-    .header { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; padding:30px; text-align:center; }
-    .header h1 { font-size:2em; margin-bottom:10px; font-weight:600; }
-    .header p { opacity:.9; font-size:1.1em; }
-    .role-selector { padding:30px; text-align:center; border-bottom:1px solid #eee; }
-    .role-buttons { display:flex; gap:15px; justify-content:center; margin-top:20px; flex-wrap:wrap; }
-    .role-btn { padding:15px 30px; border:2px solid #667eea; background:#fff; color:#667eea; border-radius:50px;
-                font-size:1.1em; font-weight:600; cursor:pointer; transition:.3s; }
-    .role-btn:hover { background:#667eea; color:#fff; transform:translateY(-2px); }
-    .role-btn.active { background:#667eea; color:#fff; }
-    .main-content { padding:30px; display:none; }
-    .main-content.active { display:block; }
-    .hotel-setup { text-align:center; }
-    .hotel-input { width:100%; padding:15px; border:2px solid #eee; border-radius:10px; font-size:1.1em; margin:20px 0; }
-    .generate-btn { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; padding:15px 30px;
-                    border-radius:50px; font-size:1.1em; cursor:pointer; transition:transform .3s; }
-    .generate-btn:hover { transform:translateY(-2px); }
-    .qr-container { margin:30px 0; padding:20px; background:#f8f9fa; border-radius:15px; display:none; }
-    .qr-container.active { display:block; }
-    .translation-interface { text-align:center; }
-    .room-id { background:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:30px; font-family:monospace; font-size:1.2em; font-weight:700; }
-    .record-container { margin:30px 0; }
-    .record-btn { width:120px; height:120px; border:none; border-radius:50%;
-                  background:linear-gradient(135deg,#ff6b6b,#ee5a52); color:#fff; font-size:1.2em; cursor:pointer;
-                  transition:.3s; box-shadow:0 10px 20px rgba(255,107,107,.3); }
-    .record-btn:hover { transform:scale(1.05); }
-    .record-btn.recording { background:linear-gradient(135deg,#ff4757,#ff3838); animation:pulse 1s infinite; }
-    @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
-    .language-selector { margin:20px 0; }
-    .language-select { padding:10px 15px; border:2px solid #eee; border-radius:10px; font-size:1em; width:200px; }
-    .messages { max-height:400px; overflow-y:auto; border:1px solid #eee; border-radius:15px; padding:20px; margin:20px 0; background:#f8f9fa; }
-    .message { margin:15px 0; padding:15px; border-radius:12px; animation:slideIn .3s ease; }
-    .message.guest { background:#e3f2fd; border-left:4px solid #2196f3; }
-    .message.receptionist { background:#e8f5e8; border-left:4px solid #4caf50; }
-    .message-header { font-weight:700; margin-bottom:5px; color:#555; font-size:.9em; }
-    .original-text { font-size:1.1em; margin-bottom:8px; }
-    .translated-text { font-style:italic; color:#666; }
-    @keyframes slideIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
-    .status { padding:10px; border-radius:8px; margin:10px 0; font-weight:500; }
-    .status.success { background:#d4edda; color:#155724; }
-    .status.error { background:#f8d7da; color:#721c24; }
-    .status.info { background:#cce7ff; color:#004085; }
-    .text-input-container { margin:20px 0; }
-    .text-input { width:100%; padding:15px; border:2px solid #eee; border-radius:10px; font-size:1em; resize:vertical; min-height:80px; }
-    .send-btn { background:linear-gradient(135deg,#4caf50,#45a049); color:#fff; border:none; padding:12px 25px; border-radius:8px; font-size:1em; cursor:pointer; margin-top:10px; }
-    .audio-controls { margin-top:15px; display:flex; align-items:center; justify-content:center; gap:15px; }
-    .play-btn { background:linear-gradient(135deg,#2196f3,#1976d2); color:#fff; border:none; padding:8px 12px; border-radius:20px; font-size:.9em; cursor:pointer; transition:transform .2s; }
-    .play-btn:hover { transform:scale(1.05); }
-    .play-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; }
-    .connection-status { position:fixed; top:20px; right:20px; padding:8px 15px; border-radius:20px; font-size:.9em; font-weight:700; }
-    .connection-status.connected { background:#4caf50; color:#fff; }
-    .connection-status.disconnected { background:#ff4757; color:#fff; }
-    .permission-status { padding:10px; margin:10px 0; border-radius:8px; text-align:center; font-weight:700; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
+    .container{max-width:600px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden}
+    .header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:30px;text-align:center}
+    .header h1{font-size:2em;margin-bottom:10px;font-weight:600}
+    .header p{opacity:.9;font-size:1.1em}
+    .role-selector{padding:30px;text-align:center;border-bottom:1px solid #eee}
+    .role-buttons{display:flex;gap:15px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+    .role-btn{padding:15px 30px;border:2px solid #667eea;background:#fff;color:#667eea;border-radius:50px;font-size:1.1em;font-weight:600;cursor:pointer;transition:.3s}
+    .role-btn:hover{background:#667eea;color:#fff;transform:translateY(-2px)}
+    .role-btn.active{background:#667eea;color:#fff}
+    .main-content{padding:30px;display:none}
+    .main-content.active{display:block}
+    .hotel-setup{text-align:center}
+    .hotel-input{width:100%;padding:15px;border:2px solid #eee;border-radius:10px;font-size:1.1em;margin:20px 0}
+    .generate-btn{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;padding:15px 30px;border-radius:50px;font-size:1.1em;cursor:pointer;transition:transform .3s}
+    .generate-btn:hover{transform:translateY(-2px)}
+    .qr-container{margin:30px 0;padding:20px;background:#f8f9fa;border-radius:15px;display:none}
+    .qr-container.active{display:block}
+    .translation-interface{text-align:center}
+    .room-id{background:#f8f9fa;padding:15px;border-radius:10px;margin-bottom:30px;font-family:monospace;font-size:1.2em;font-weight:700}
+    .record-container{margin:30px 0}
+    .record-btn{width:120px;height:120px;border:none;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ee5a52);color:#fff;font-size:1.2em;cursor:pointer;transition:.3s;box-shadow:0 10px 20px rgba(255,107,107,.3)}
+    .record-btn:hover{transform:scale(1.05)}
+    .record-btn.recording{background:linear-gradient(135deg,#ff4757,#ff3838);animation:pulse 1s infinite}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+    .language-selector{margin:20px 0}
+    .language-select{padding:10px 15px;border:2px solid #eee;border-radius:10px;font-size:1em;width:200px}
+    .messages{max-height:400px;overflow-y:auto;border:1px solid #eee;border-radius:15px;padding:20px;margin:20px 0;background:#f8f9fa}
+    .message{margin:15px 0;padding:15px;border-radius:12px;animation:slideIn .3s ease}
+    .message.guest{background:#e3f2fd;border-left:4px solid #2196f3}
+    .message.receptionist{background:#e8f5e8;border-left:4px solid #4caf50}
+    .message-header{font-weight:700;margin-bottom:5px;color:#555;font-size:.9em}
+    .original-text{font-size:1.1em;margin-bottom:8px}
+    .translated-text{font-style:italic;color:#666}
+    @keyframes slideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .status{padding:10px;border-radius:8px;margin:10px 0;font-weight:500}
+    .status.success{background:#d4edda;color:#155724}
+    .status.error{background:#f8d7da;color:#721c24}
+    .status.info{background:#cce7ff;color:#004085}
+    .text-input-container{margin:20px 0}
+    .text-input{width:100%;padding:15px;border:2px solid #eee;border-radius:10px;font-size:1em;resize:vertical;min-height:80px}
+    .send-btn{background:linear-gradient(135deg,#4caf50,#45a049);color:#fff;border:none;padding:12px 25px;border-radius:8px;font-size:1em;cursor:pointer;margin-top:10px}
+    .audio-controls{margin-top:15px;display:flex;align-items:center;justify-content:center;gap:15px}
+    .play-btn{background:linear-gradient(135deg,#2196f3,#1976d2);color:#fff;border:none;padding:8px 12px;border-radius:20px;font-size:.9em;cursor:pointer;transition:transform .2s}
+    .play-btn:hover{transform:scale(1.05)}
+    .play-btn:disabled{background:#ccc;cursor:not-allowed;transform:none}
+    .connection-status{position:fixed;top:20px;right:20px;padding:8px 15px;border-radius:20px;font-size:.9em;font-weight:700}
+    .connection-status.connected{background:#4caf50;color:#fff}
+    .connection-status.disconnected{background:#ff4757;color:#fff}
   </style>
 </head>
 <body>
@@ -75,6 +68,7 @@
       <p>Real-time communication across languages</p>
     </div>
 
+    <!-- Role picker -->
     <div class="role-selector" id="roleSelector">
       <h3>Select Your Role</h3>
       <div class="role-buttons">
@@ -96,7 +90,7 @@
           <div id="qrCode"></div>
           <p><strong>Room ID:</strong> <span id="generatedRoomId"></span></p>
           <p><strong>Guest URL:</strong> <a href="#" id="guestUrlLink" target="_blank"><span id="guestUrl"></span></a></p>
-          <div style="margin-top:15px; padding:10px; background:#e8f4fd; border-radius:8px; font-size:.9em; color:#1976d2;">
+          <div style="margin-top:15px;padding:10px;background:#e8f4fd;border-radius:8px;font-size:.9em;color:#1976d2;">
             <strong>Instructions:</strong> Guests can scan the QR or tap the link above.
           </div>
         </div>
@@ -126,16 +120,13 @@
             <option value="fr-FR">French</option>
           </select>
         </div>
-
         <div class="record-container">
           <button class="record-btn" id="guestRecordBtn" onclick="toggleRecording('guest')">Speak</button>
         </div>
-
         <div class="text-input-container">
           <textarea id="guestTextInput" class="text-input" placeholder="Or type your message here..."></textarea>
           <button class="send-btn" onclick="sendTextMessage('guest')">Send Text</button>
         </div>
-
         <div id="guestStatus"></div>
         <div class="messages" id="guestMessages"></div>
       </div>
@@ -146,16 +137,13 @@
       <div class="translation-interface">
         <h3>Receptionist Interface</h3>
         <div class="room-id">Room: <span id="receptionistRoomId">-</span></div>
-
         <div class="record-container">
           <button class="record-btn" id="receptionistRecordBtn" onclick="toggleRecording('receptionist')">Speak (English)</button>
         </div>
-
         <div class="text-input-container">
           <textarea id="receptionistTextInput" class="text-input" placeholder="Type your response in English..."></textarea>
           <button class="send-btn" onclick="sendTextMessage('receptionist')">Send Text</button>
         </div>
-
         <div id="receptionistStatus"></div>
         <div class="messages" id="receptionistMessages"></div>
       </div>
@@ -163,95 +151,76 @@
   </div>
 
   <script>
-    // ========= CONFIG =========
-    const TTS_ENABLED = false; // MVP: server returns 501; set true when you add TTS backend
-    // ==========================
+    // ===== CONFIG =====
+    const TTS_ENABLED = false; // MVP: server's /api/tts returns 501
+    const MIN_MS = 1000;
+    // ==================
 
     let socket = null;
     let currentRole = null;
     let currentRoom = null;
 
-    // audio (PCM path)
-    let audioCtx, mediaStream, sourceNode, processorNode;
-    let recording = false;
-    let chunks = []; // Float32Array[]
-    const MIN_MS = 1000;
-
     // connection badge
-    function updateConnectionStatus(ok) {
+    function updateConnectionStatus(ok){
       const el = document.getElementById('connectionStatus');
       el.textContent = ok ? 'Connected' : 'Disconnected';
       el.className = 'connection-status ' + (ok ? 'connected' : 'disconnected');
     }
 
-    // socket
-    function initSocket() {
-      socket = io();
+    function initSocket(){
+      socket = io(); // same origin
       socket.on('connect', () => updateConnectionStatus(true));
       socket.on('disconnect', () => updateConnectionStatus(false));
       socket.on('translation', handleTranslation);
-      socket.on('room_joined', () => showStatus(currentRole, 'Connected to room', 'success'));
-      socket.on('user_joined', d => showStatus(currentRole, `${d.role} joined`, 'info'));
+      socket.on('room_joined', d => showStatus(currentRole, `Connected to room: ${d.room}`,'success'));
+      socket.on('user_joined', d => showStatus(currentRole, `${d.role} joined`,'info'));
       socket.on('processing_status', handleProcessingStatus);
-      socket.on('error', e => showStatus(currentRole, e.message || 'Error', 'error'));
+      socket.on('error', e => showStatus(currentRole, e.message || 'Error','error'));
     }
 
-    // page init
-    document.addEventListener('DOMContentLoaded', () => {
-      updateConnectionStatus(false);
-
-      // deep link: if ?room= present, hide Admin
-      const room = new URLSearchParams(location.search).get('room');
-      if (room) {
-        const adminBtn = document.querySelector('.role-btn[onclick="selectRole(\'admin\')"]');
-        if (adminBtn) adminBtn.style.display = 'none';
-      }
-    });
-
-    function selectRole(role) {
+    // Role flow
+    function selectRole(role){
       currentRole = role;
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
       event.target.classList.add('active'); // eslint-disable-line
-
       document.getElementById('roleSelector').style.display = 'none';
       document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
-      document.getElementById(role + 'Content').classList.add('active');
+      document.getElementById(role+'Content').classList.add('active');
 
       if (!socket) initSocket();
 
-      if (role === 'guest' || role === 'receptionist') {
+      if (role === 'guest' || role === 'receptionist'){
         const urlRoom = new URLSearchParams(location.search).get('room');
         if (urlRoom) joinRoom(urlRoom);
-        else if (role === 'receptionist') {
+        else if (role === 'receptionist'){
           const manual = prompt('Enter Room ID:');
           if (manual) joinRoom(manual);
         } else {
-          showStatus(role, 'Please scan the QR or use the link from the desk', 'info');
+          showStatus(role,'Please scan the QR or use the shared link','info');
         }
       }
     }
 
-    function generateQR() {
-      const hotelName = document.getElementById('hotelName').value.trim();
-      if (!hotelName) return alert('Enter a hotel name');
-
-      fetch('/api/generate-room', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ hotelName })
-      }).then(r => r.json()).then(data => {
+    // Admin → Create room + QR
+    function generateQR(){
+      const hotelName = (document.getElementById('hotelName').value || 'My Hotel').trim();
+      fetch('/api/generate-room',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({hotelName})
+      }).then(r=>r.json()).then(data=>{
+        // Build URL on the client using the public host (works on Render)
+        const guestUrl = `${location.origin}/?room=${data.roomId}`;
         document.getElementById('qrContainer').classList.add('active');
         document.getElementById('generatedRoomId').textContent = data.roomId;
-        document.getElementById('guestUrl').textContent = data.guestUrl;
-        const link = document.getElementById('guestUrlLink');
-        link.href = data.guestUrl;
+        document.getElementById('guestUrl').textContent = guestUrl;
+        const a = document.getElementById('guestUrlLink'); a.href = guestUrl;
 
-        const qr = qrcode(0, 'M');
-        qr.addData(data.guestUrl); qr.make();
-        const tag = qr.createImgTag(4, 8);
-        const box = document.getElementById('qrCode');
-        box.innerHTML = tag;
+        const qr = qrcode(0,'M'); qr.addData(guestUrl); qr.make();
+        const tag = qr.createImgTag(4,8);
+        const box = document.getElementById('qrCode'); box.innerHTML = tag;
         const img = box.querySelector('img');
-        if (img) {
+        if (img){
           img.style.border='10px solid white';
           img.style.borderRadius='10px';
           img.style.boxShadow='0 4px 8px rgba(0,0,0,.1)';
@@ -259,183 +228,147 @@
           img.style.margin='0 auto';
         }
         currentRoom = data.roomId;
-      }).catch(() => alert('Failed to generate QR'));
+      }).catch(()=>alert('Failed to generate QR'));
     }
 
-    function joinRoom(roomId) {
+    function joinRoom(roomId){
       currentRoom = roomId;
       if (currentRole === 'guest') document.getElementById('guestRoomId').textContent = roomId;
       if (currentRole === 'receptionist') document.getElementById('receptionistRoomId').textContent = roomId;
 
       const lang = (currentRole === 'guest') ? document.getElementById('guestLanguage').value : 'en-US';
-      socket.emit('join_room', { room: roomId, role: currentRole, language: lang });
-      showStatus(currentRole, 'Connecting...', 'info');
+      socket.emit('join_room',{ room: roomId, role: currentRole, language: lang });
+      showStatus(currentRole,'Connecting...','info');
     }
 
-    function handleProcessingStatus(d) {
-      const map = { transcribing:'Converting speech to text...',
-                    translating:'Translating...',
-                    complete:'Translation complete!',
-                    error: d.message || 'Processing failed' };
-      const type = d.status === 'error' ? 'error' : (d.status === 'complete' ? 'success' : 'info');
+    function handleProcessingStatus(d){
+      const map = {
+        transcribing:'Converting speech to text...',
+        translating:'Translating...',
+        complete:'Translation complete!',
+        error: d.message || 'Processing failed'
+      };
+      const type = d.status==='error' ? 'error' : (d.status==='complete' ? 'success' : 'info');
       showStatus(currentRole, map[d.status] || 'Processing...', type);
     }
 
-    function handleTranslation(msg) {
+    function handleTranslation(msg){
       renderMessage('guest', msg);
       renderMessage('receptionist', msg);
     }
 
-    function renderMessage(role, data) {
-      const box = document.getElementById(role + 'Messages');
+    function renderMessage(role, data){
+      const box = document.getElementById(role+'Messages');
       if (!box) return;
 
       const el = document.createElement('div');
       el.className = `message ${data.speaker}`;
 
-      let primary, secondary, pLang, sLang;
-      if (role === 'guest') {
-        if (data.speaker === 'guest') {
-          primary = data.original.text; pLang = data.original.language;
-          secondary = data.translated.text; sLang = data.translated.language;
-        } else {
-          primary = data.translated.text; pLang = data.translated.language;
-          secondary = data.original.text; sLang = data.original.language;
-        }
-      } else { // receptionist
-        if (data.speaker === 'receptionist') {
-          primary = data.original.text; pLang = data.original.language;
-          secondary = data.translated.text; sLang = data.translated.language;
-        } else {
-          primary = data.translated.text; pLang = data.translated.language;
-          secondary = data.original.text; sLang = data.original.language;
-        }
+      let primary, secondary;
+      if (role === 'guest'){
+        if (data.speaker === 'guest'){ primary = data.original.text; secondary = data.translated.text; }
+        else { primary = data.translated.text; secondary = data.original.text; }
+      } else {
+        if (data.speaker === 'receptionist'){ primary = data.original.text; secondary = data.translated.text; }
+        else { primary = data.translated.text; secondary = data.original.text; }
       }
 
-      const esc = (t) => (t||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      const esc = t => (t||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
       el.innerHTML = `
         <div class="message-header">
-          ${data.speaker === 'guest' ? '👤 Guest' : '🏨 Receptionist'}
-          <span style="font-size:.8em;color:#666;">(${data.speaker === role ? 'You' : 'Them'})</span>
+          ${data.speaker==='guest'?'👤 Guest':'🏨 Receptionist'}
+          <span style="font-size:.8em;color:#666;">(${data.speaker===role?'You':'Them'})</span>
         </div>
         <div class="original-text">${esc(primary)}</div>
-        ${secondary && secondary !== primary ? `<div class="translated-text">Translation: ${esc(secondary)}</div>` : ''}
+        ${secondary && secondary!==primary ? `<div class="translated-text">Translation: ${esc(secondary)}</div>` : ''}
         <div class="audio-controls">
-          <button class="play-btn" ${TTS_ENABLED ? '' : 'disabled title="TTS disabled for MVP"'}>🔊 Play</button>
-          <button class="play-btn" style="background:linear-gradient(135deg,#ff6b6b,#ee5a52);" ${TTS_ENABLED ? '' : 'disabled'}>🔇 Stop</button>
+          <button class="play-btn" disabled title="TTS disabled for MVP">🔊 Play</button>
+          <button class="play-btn" style="background:linear-gradient(135deg,#ff6b6b,#ee5a52);" disabled>🔇 Stop</button>
         </div>
       `;
       box.appendChild(el);
       box.scrollTop = box.scrollHeight;
     }
 
-    function showStatus(role, msg, kind) {
-      const el = document.getElementById(role + 'Status');
-      if (!el) return;
+    function showStatus(role, msg, kind){
+      const id = role==='guest' ? 'guestStatus' : (role==='receptionist' ? 'receptionistStatus' : null);
+      if (!id) return;
+      const el = document.getElementById(id);
       el.innerHTML = msg ? `<div class="status ${kind}">${msg}</div>` : '';
       if (msg) setTimeout(()=>{ el.innerHTML=''; }, 4000);
     }
 
-    // --------- AUDIO PIPELINE (PCM 16k) ----------
-    async function ensureAudio() {
+    // ---------- AUDIO: 16kHz mono PCM pipeline ----------
+    let audioCtx, mediaStream, sourceNode, processorNode, chunks = [], recording=false;
+
+    async function ensureAudio(){
       if (audioCtx) return;
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       sourceNode = audioCtx.createMediaStreamSource(mediaStream);
-      processorNode = audioCtx.createScriptProcessor(4096, 1, 1);
-      processorNode.onaudioprocess = (e) => {
-        if (!recording) return;
-        chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-      };
+      processorNode = audioCtx.createScriptProcessor(4096,1,1);
+      processorNode.onaudioprocess = e => { if (recording) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
       sourceNode.connect(processorNode);
       processorNode.connect(audioCtx.destination);
     }
 
-    function mergeFloat32(arrs) {
-      const len = arrs.reduce((n,a)=>n+a.length,0);
-      const out = new Float32Array(len);
-      let off=0; for (const a of arrs){ out.set(a,off); off+=a.length; }
-      return out;
-    }
+    function mergeFloat32(arrs){ const len = arrs.reduce((n,a)=>n+a.length,0); const out=new Float32Array(len); let o=0; for(const a of arrs){ out.set(a,o); o+=a.length; } return out; }
+    function resampleTo16k(float32, inRate){ const outRate=16000, ratio=inRate/outRate, n=Math.round(float32.length/ratio), out=new Float32Array(n); for(let i=0;i<n;i++){ const idx=i*ratio, i0=Math.floor(idx), i1=Math.min(i0+1,float32.length-1), frac=idx-i0; out[i]=float32[i0]*(1-frac)+float32[i1]*frac; } return out; }
+    function floatTo16lePCM(float32){ const buf=new ArrayBuffer(float32.length*2), view=new DataView(buf); for(let i=0,o=0;i<float32.length;i++,o+=2){ let s=Math.max(-1,Math.min(1,float32[i])); s = s<0 ? s*0x8000 : s*0x7FFF; view.setInt16(o,s,true);} return buf; }
+    function bufToB64(buf){ let bin=''; const bytes=new Uint8Array(buf), chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); } return btoa(bin); }
 
-    function resampleTo16k(float32, inRate) {
-      const outRate = 16000, ratio = inRate / outRate;
-      const n = Math.round(float32.length / ratio);
-      const out = new Float32Array(n);
-      for (let i=0;i<n;i++){
-        const idx = i*ratio; const i0 = Math.floor(idx); const i1 = Math.min(i0+1,float32.length-1);
-        const frac = idx - i0; out[i] = float32[i0]*(1-frac) + float32[i1]*frac;
-      }
-      return out;
-    }
-
-    function floatTo16lePCM(float32) {
-      const buf = new ArrayBuffer(float32.length*2);
-      const view = new DataView(buf);
-      let o=0;
-      for (let i=0;i<float32.length;i++,o+=2){
-        let s = Math.max(-1, Math.min(1, float32[i]));
-        s = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        view.setInt16(o, s, true);
-      }
-      return buf;
-    }
-
-    function bufToB64(buf) {
-      let bin=''; const bytes=new Uint8Array(buf); const chunk=0x8000;
-      for (let i=0;i<bytes.length;i+=chunk){ bin += String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); }
-      return btoa(bin);
-    }
-
-    async function toggleRecording(role) {
-      const btn = document.getElementById(role + 'RecordBtn');
-
-      if (!recording) {
-        try {
-          await ensureAudio();
-        } catch (e) {
-          return showStatus(role, 'Microphone permission required', 'error');
-        }
-        chunks = [];
-        recording = true;
-        btn.classList.add('recording');
-        btn.textContent = role === 'guest' ? 'Recording...' : 'Recording...';
-        showStatus(role, 'Recording... click again to stop', 'info');
-        btn.dataset.startTs = Date.now();
+    async function toggleRecording(role){
+      const btn = document.getElementById(role+'RecordBtn');
+      if (!recording){
+        try { await ensureAudio(); } catch { return showStatus(role,'Microphone permission required','error'); }
+        chunks=[]; recording=true; btn.classList.add('recording'); btn.textContent = role==='guest'?'Recording...':'Recording...'; btn.dataset.ts=Date.now();
+        showStatus(role,'Recording... click again to stop','info');
       } else {
-        recording = false;
-        btn.classList.remove('recording');
-        btn.textContent = role === 'guest' ? 'Speak' : 'Speak (English)';
-
-        const dur = Date.now() - (parseInt(btn.dataset.startTs || '0',10));
-        if (dur < MIN_MS) {
-          chunks = [];
-          return showStatus(role, 'Recording too short. Please speak at least 1s.', 'error');
-        }
-
-        // build PCM 16k
-        const merged = mergeFloat32(chunks); chunks = [];
+        recording=false; btn.classList.remove('recording'); btn.textContent = role==='guest'?'Speak':'Speak (English)';
+        const dur = Date.now() - (parseInt(btn.dataset.ts||'0',10));
+        if (dur < MIN_MS){ chunks=[]; return showStatus(role,'Recording too short. Please speak at least 1s.','error'); }
+        const merged = mergeFloat32(chunks); chunks=[];
         const resampled = resampleTo16k(merged, audioCtx.sampleRate);
-        const pcm16 = floatTo16lePCM(resampled);
-        const b64 = bufToB64(pcm16);
-
-        const language = (role === 'guest') ? document.getElementById('guestLanguage').value : 'en-US';
-        socket.emit('audio_message', { room: currentRoom, role, language, audioData: b64 });
-        showStatus(role, 'Processing...', 'info');
+        const pcm = floatTo16lePCM(resampled);
+        const b64 = bufToB64(pcm);
+        const language = (role==='guest') ? document.getElementById('guestLanguage').value : 'en-US';
+        socket.emit('audio_message',{ room: currentRoom, role, language, audioData: b64 });
+        showStatus(role,'Processing...','info');
       }
     }
-    // ---------------------------------------------
+    // ----------------------------------------------------
 
-    // typed messages
-    function sendTextMessage(role) {
-      const el = document.getElementById(role + 'TextInput');
+    function sendTextMessage(role){
+      const el = document.getElementById(role+'TextInput');
       const text = el.value.trim(); if (!text) return;
-      const language = (role === 'guest') ? document.getElementById('guestLanguage').value : 'en-US';
-      socket.emit('text_message', { room: currentRoom, role, language, text });
-      el.value = ''; showStatus(role, 'Message sent!', 'success');
+      const language = (role==='guest') ? document.getElementById('guestLanguage').value : 'en-US';
+      socket.emit('text_message',{ room: currentRoom, role, language, text });
+      el.value=''; showStatus(role,'Message sent!','success');
     }
 
-    // expose for buttons
+    // Auto-guest when opened from QR
+    document.addEventListener('DOMContentLoaded', () => {
+      updateConnectionStatus(false);
+      const room = new URLSearchParams(location.search).get('room');
+      if (room){
+        // Hide Admin button (optional)
+        const adminBtn = document.querySelector('.role-btn[onclick="selectRole(\'admin\')"]');
+        if (adminBtn) adminBtn.style.display='none';
+        // Show Guest
+        currentRole = 'guest';
+        document.getElementById('roleSelector').style.display='none';
+        document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('guestContent').classList.add('active');
+        if (!socket) initSocket();
+        currentRoom = room;
+        document.getElementById('guestRoomId').textContent = room;
+        const lang = document.getElementById('guestLanguage').value;
+        socket.emit('join_room',{ room, role:'guest', language: lang });
+        showStatus('guest','Connecting...','info');
+      }
+    });
+
+    // Expose for onclick
     window.selectRole = selectRole;
     window.generateQR = generateQR;
     window.toggleRecording = toggleRecording;
